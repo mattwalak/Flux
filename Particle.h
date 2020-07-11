@@ -12,16 +12,20 @@
 
 class Particle{
 	VEC2 pos_, vel_;
+	VEC3 color_;
 public:
-	void init(const VEC2& pos, const VEC2& vel){
+	void init(const VEC2& pos, const VEC2& vel, const VEC3& color){
 		pos_ = pos;
 		vel_ = vel;
+		color_ = color;
 	}
 
 	void setPos(const VEC2& pos) {pos_ = pos; }
 	VEC2 getPos() const { return pos_; }
 	void setVel(const VEC2& vel) {vel_ = vel; }
 	VEC2 getVel() const { return vel_; }
+	void setColor(const VEC3& color) {color_ = color; }
+	VEC3 getColor() const { return color_; }
 
 	// Advances the simulation
 	// if we cross a pixel grid line durring this step, return true and set newPixel to coordinates of new pixel
@@ -42,36 +46,26 @@ public:
 
 class Tracer{
 	int width_, height_;
-	float * flux_;
+	VEC3 * flux_;
 	float scale_;
 	PerlinNoise * pNoise_;
 	std::vector<Particle> particles_;
+	std::vector<VEC3> colors_;
 
 	float field_strength = 1.0f;
 	float step_dt = 2.0f;
 	int particle_radius = 2;
 	float max_edge_dist = sqrt(2.0f*pow(particle_radius, 2));
 public:
-	Tracer(int width, int height, int numParticles, float scale): width_(width), height_(height), scale_(scale) {
-		flux_ = new float[width_*height_]();
+	Tracer(int width, int height, int numParticles, float scale, const std::vector<VEC3>& colors): width_(width), height_(height), scale_(scale) {
+		flux_ = new VEC3[width_*height_]();
 		pNoise_ = new PerlinNoise(10);
-
-		/*
-		for(int x = 0; x < width_; x++){
-			for(int y = 0; y < height_; y++){
-				for(int i = 0; i < 4; i++){
-					for(int j = 0; j < 4; j++){
-						Particle p;
-						p.init(VEC2(x + i/4.0f, y + j/4.0f), VEC2(0.0f, 0.0f));
-						particles_.push_back(p);
-					}
-				}
-			}
-		}*/
+		colors_ = colors;
 
 		for(int i = 0; i < numParticles; i++){
 			Particle p;
-			p.init(VEC2(rand()%width_, rand()%height), VEC2(0.0f, 0.0f));
+			int color_i = rand()%colors.size();
+			p.init(VEC2(rand()%width_, rand()%height), VEC2(0.0f, 0.0f), colors[color_i]);
 			particles_.push_back(p);
 		}
 	}
@@ -109,8 +103,10 @@ public:
 							int coord_y = pix_y + y;
 							if(COORD_IN_BOUNDS(coord_x, coord_y, width_, height_)){
 								float dist = sqrt(pow(abs(x), 2) + pow(abs(y), 2));
-								float strength = 1.0f - dist/max_edge_dist;
-								flux_[coord_y*width_ + coord_x] += strength;
+								if(dist <= particle_radius){
+									float strength = 1.0f - dist/particle_radius;
+									flux_[coord_y*width_ + coord_x] += strength * particles_[i].getColor();
+								}
 							}
 						}
 					}
@@ -136,33 +132,36 @@ public:
 
 	// Normalizes everything [0, 1]
 	// assumes flux_out has already been allocated
-	void getNormalizedFlux(float * flux_out){
+	void getNormalizedFlux(VEC3 * flux_out){
 		float min = INFINITY;
 		float max = -INFINITY;
 		for(int i = 0; i < width_*height_; i++){
-			if(flux_[i] < min)
-				min = flux_[i];
-			if(flux_[i] > max)
-				max = flux_[i];
+			float norm = flux_[i].norm();
+			if(norm < min)
+				min = norm;
+			if(norm > max)
+				max = norm;
 		}
-
 		float span = log(max + 1.0f) - log(min + 1.0f);
 		for(int i = 0; i < width_*height_; i++){
-			flux_out[i] = clamp(log(flux_[i] + 1.0f)/span);
+			float norm = flux_[i].norm();
+			flux_out[i] = flux_[i].normalized() * clamp(log(norm + 1.0f)/span);
 		}
 	}
 
 	// Assumes pixels have already been allocated
 	void toImage(float * pixels){
-		float norm_flux[width_*height_];
+		//VEC3 norm_flux[1000*1000];
+		VEC3 * norm_flux = new VEC3[width_*height_](); // I am so confused why I need this
 		getNormalizedFlux(norm_flux);
 		for(int y = 0; y < height_; y++){
 			for(int x = 0; x < width_; x++){
-				pixels[3*(y*width_ + x) + 0] = norm_flux[y*width_ + x] * 255.0f;
-				pixels[3*(y*width_ + x) + 1] = norm_flux[y*width_ + x] * 255.0f;
-				pixels[3*(y*width_ + x) + 2] = norm_flux[y*width_ + x] * 255.0f;
+				pixels[3*(y*width_ + x) + 0] = norm_flux[y*width_ + x][0] * 255.0f;
+				pixels[3*(y*width_ + x) + 1] = norm_flux[y*width_ + x][1] * 255.0f;
+				pixels[3*(y*width_ + x) + 2] = norm_flux[y*width_ + x][2] * 255.0f;
 			}
 		}
+		delete[] norm_flux; // Like wtf
 	}	
 };
 
