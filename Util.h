@@ -13,7 +13,7 @@ float clamp(const float& t){
     return t;
 }
 
-void writePPM(const std::string& filename, int& xRes, int& yRes, const float* values)
+void writePPM(const std::string& filename, int xRes, int yRes, const float* values)
 {
   int totalCells = xRes * yRes;
   unsigned char* pixels = new unsigned char[3 * totalCells];
@@ -36,7 +36,7 @@ void writePPM(const std::string& filename, int& xRes, int& yRes, const float* va
   delete[] pixels;
 }
 
-void readPPM(const std::string& filename, int& xRes, int& yRes, float*& values)
+void readPPM(const std::string& filename, int xRes, int yRes, float*& values)
 {
   // try to open the file
   FILE *fp;

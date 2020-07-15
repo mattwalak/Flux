@@ -114,4 +114,21 @@ public:
 	}
 };
 
+class EvolvingNoise{
+	PerlinNoise * pNoise_1;
+	PerlinNoise * pNoise_2;
+public:
+	EvolvingNoise(const int& max_grid_in){
+		pNoise_1 = new PerlinNoise(max_grid_in);
+		pNoise_2 = new PerlinNoise(max_grid_in);
+	}
+
+	float noise(const float& u, const float& v, const float& evolution){
+		float sample = pNoise_1->noise(u + evolution, v);
+		sample += pNoise_2->noise(u - evolution, v);
+		sample /= 2;
+		return sample;
+	}
+};
+
 #endif // PerlinNoise_h

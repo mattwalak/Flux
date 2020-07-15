@@ -1,9 +1,8 @@
-#ifndef hsv_h
-#define hsv_h
+#ifndef COLOR_h
+#define COLOR_h
 
 #include<cmath> // Needed for fmod()
-
-// Credit: https://gist.github.com/kuathadianto/200148f53616cbd226d993b400214a7f
+#include <vector>
 
 /*
  * H(Hue): 0 - 360 degree (integer)
@@ -12,7 +11,7 @@
  * 
  * output[3]: Output, array size 3, int
  */
-
+// Credit: https://gist.github.com/kuathadianto/200148f53616cbd226d993b400214a7f
 void HSVtoRGB(int H, double S, double V, float output[3]) {
 	double C = S * V;
 	double X = C * (1 - abs(fmod(H / 60.0, 2) - 1));
@@ -55,4 +54,18 @@ void HSVtoRGB(int H, double S, double V, float output[3]) {
 	output[2] = (Bs + m);
 }
 
-#endif // hsv_h
+void solveColors(std::vector<VEC3>& colors, int numColors){
+    float component_sum = 0.0f;
+    for(int i = 0; i < numColors; i++){
+        float thisColor[3];
+        float h = 360.0f*(float)i/numColors;
+        HSVtoRGB(h, 1.0f, 1.0f, thisColor);
+        component_sum += thisColor[0];
+        colors.push_back(VEC3(thisColor[0], thisColor[1], thisColor[2]));
+    }
+    for(int i = 0; i < numColors*3; i++){
+        colors[i] /= component_sum;
+    }
+}
+
+#endif // COLOR_h

@@ -1,0 +1,2 @@
+#!/bin/bash
+ffmpeg -r 30 -f image2 -s 480x270 -i oven/frame_%04d.ppm -vcodec libx264 -crf 25  -pix_fmt yuv420p oven/output.mp4
