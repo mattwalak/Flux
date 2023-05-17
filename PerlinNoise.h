@@ -23,8 +23,9 @@ inline VEC2 toDirection(float sample){
 class PerlinNoise{
 	VEC2 * gradient_;
 	int width_, height_, max_grid_;
+	float scale_;
 public:
-	PerlinNoise(const int& max_grid_in){
+	PerlinNoise(const int& max_grid_in, const float& scale): scale_(scale){
 		max_grid_ = max_grid_in;
 		width_ = max_grid_ + 1;
 		height_ = max_grid_ + 1;
@@ -68,11 +69,13 @@ public:
 	}
 
 	float noise(const float& u, const float& v){
+		float u_scaled = scale_*u;
+		float v_scaled = scale_*v;
 
-		VEC2 q = VEC2(u, v); // our sample position
-		int min_u = (int)floor(u);
+		VEC2 q = VEC2(u_scaled, v_scaled); // our sample position
+		int min_u = (int)floor(u_scaled);
 		int max_u = (min_u + 1);
-		int min_v = (int)floor(v);
+		int min_v = (int)floor(v_scaled);
 		int max_v = (min_v + 1);
 
 		// looped u and v so that if we exceed the max grid we just repeat when finding gradient_ vectors
@@ -99,9 +102,9 @@ public:
 			dot[i] = grad[i].dot(dist[i]);
 
 		// Interpolate
-		float mid_top = SMOOTH_2(dot[3], dot[2], (u-min_u)/1.0f);
-		float mid_bottom = SMOOTH_2(dot[0], dot[1], (u-min_u)/1.0f);
-		return SMOOTH_2(mid_bottom, mid_top, (v-min_v)/1.0f);
+		float mid_top = SMOOTH_2(dot[3], dot[2], (u_scaled-min_u)/1.0f);
+		float mid_bottom = SMOOTH_2(dot[0], dot[1], (u_scaled-min_u)/1.0f);
+		return SMOOTH_2(mid_bottom, mid_top, (v_scaled-min_v)/1.0f);
 	}
 
 	float turbulence(const float& u, const float& v){
@@ -117,13 +120,16 @@ public:
 class EvolvingNoise{
 	PerlinNoise * pNoise_1;
 	PerlinNoise * pNoise_2;
+	float evolution_vel_;
 public:
-	EvolvingNoise(const int& max_grid_in){
-		pNoise_1 = new PerlinNoise(max_grid_in);
-		pNoise_2 = new PerlinNoise(max_grid_in);
+	EvolvingNoise(const int& max_grid_in, const float& scale, const float& evolution_vel): evolution_vel_(evolution_vel/scale){
+		pNoise_1 = new PerlinNoise(max_grid_in, scale);
+		pNoise_2 = new PerlinNoise(max_grid_in, scale);
 	}
 
-	float noise(const float& u, const float& v, const float& evolution){
+	float noise(const float& real_time, const float& u, const float& v){
+		float evolution = evolution_vel_ * real_time;
+		//std::cout << "evolution: " << evolution << "u: " << u << " v: " << v << std::endl;
 		float sample = pNoise_1->noise(u + evolution, v);
 		sample += pNoise_2->noise(u - evolution, v);
 		sample /= 2;
